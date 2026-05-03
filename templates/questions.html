@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Joint NextVenture | Test</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+
+<body>
+    <header class="site-header">
+        <a class="brand" href="{{ url_for('home') }}">
+            <span class="brand-mark">JNV</span>
+        </a>
+
+        <nav class="nav-links" aria-label="Primary navigation">
+            <a href="{{ url_for('home') }}">Home</a>
+            <a href="{{ url_for('contact') }}">Contact</a>
+            <a href="{{ url_for('manager_login') }}">Manager</a>
+            <a href="{{ url_for('test_series') }}">Test Series</a>
+            <a href="{{ url_for('questions') }}">Test</a>
+            <a class="nav-button" href="{{ url_for('logout') }}">Logout</a>
+        </nav>
+    </header>
+
+    <main class="page-shell">
+        <section class="questions-shell">
+            <div>
+                <p class="eyebrow">Hello {{ user_name }}</p>
+                <h1>Attempt Test</h1>
+                <p class="subtitle test-subtitle">Choose your subject and topic, attempt the test, and check your preparation level clearly.</p>
+            </div>
+
+            {% if error %}
+                <p class="form-message error">{{ error }}</p>
+            {% endif %}
+
+            <form class="filter-form" action="{{ url_for('questions') }}" method="get">
+                <div class="filter-field">
+                    <label for="subject">Subject</label>
+                    <select id="subject" name="subject">
+                        <option value="">All subjects</option>
+                        {% for subject in subjects %}
+                            <option value="{{ subject }}" {% if subject == selected_subject %}selected{% endif %}>{{ subject }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="filter-field">
+                    <label for="topic">Topic</label>
+                    <select id="topic" name="topic">
+                        <option value="">All topics</option>
+                        {% for topic in topics %}
+                            <option value="{{ topic }}" {% if topic == selected_topic %}selected{% endif %}>{{ topic }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <button class="secondary-button" type="submit">Load Test</button>
+            </form>
+
+            {% if questions %}
+                <form action="{{ url_for('submit_test') }}" method="post">
+                    <div class="question-grid">
+                    {% for question in questions %}
+                        <article class="question-card">
+                            <input type="hidden" name="test_question_id" value="{{ question.id }}">
+                            <div class="card-top">
+                                <span>Question {{ loop.index }}</span>
+                                <strong>{{ question.subject }} | {{ question.topic }}</strong>
+                            </div>
+                            <h2>{{ question.question_text }}</h2>
+                            <div class="options answer-options">
+                                <label><input type="radio" name="question_{{ question.id }}" value="A"> A. {{ question.option_a }}</label>
+                                <label><input type="radio" name="question_{{ question.id }}" value="B"> B. {{ question.option_b }}</label>
+                                <label><input type="radio" name="question_{{ question.id }}" value="C"> C. {{ question.option_c }}</label>
+                                <label><input type="radio" name="question_{{ question.id }}" value="D"> D. {{ question.option_d }}</label>
+                            </div>
+                        </article>
+                    {% endfor %}
+                    </div>
+
+                    <div class="submit-bar">
+                        <button class="primary-button" type="submit">Submit Test</button>
+                    </div>
+                </form>
+            {% elif not error %}
+                <p class="empty-state">No questions found. Add questions in SSMS first.</p>
+            {% endif %}
+        </section>
+    </main>
+</body>
+</html>

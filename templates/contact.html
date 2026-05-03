@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JNV | Contact</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+
+<body>
+    <header class="site-header">
+        <a class="brand" href="{{ url_for('home') }}">
+            <span class="brand-mark">JNV</span>
+        </a>
+
+        <nav class="nav-links" aria-label="Primary navigation">
+            <a href="{{ url_for('home') }}">Home</a>
+            <a href="{{ url_for('contact') }}">Contact</a>
+            <a href="{{ url_for('manager_login') }}">Manager</a>
+            <a class="nav-button" href="{{ url_for('signup') }}">Sign Up</a>
+        </nav>
+    </header>
+
+    <main class="page-shell">
+        <section class="contact-hero">
+            <div>
+                <p class="eyebrow">Contact Us</p>
+                <h1>Visit JNV</h1>
+                <p class="subtitle">For CBSE Class 9-12 Computer Science test practice, student registration, test series support, and preparation guidance.</p>
+            </div>
+
+            <div class="owner-profile">
+                <img src="{{ url_for('static', filename='jnv-owner.png') }}" alt="JNV founder">
+                <div>
+                    <span>Founder & Mentor</span>
+                    <strong>JNV - Joint NextVenture</strong>
+                    <p>BHU M.Sc Mathematics and Computing | UGC NET | GATE</p>
+                </div>
+            </div>
+        </section>
+
+        <section class="contact-detail-grid">
+            <article class="detail-card">
+                <span>Address</span>
+                <h2>Learning Hub</h2>
+                <p>Dwarikapuri Colony, Civil Lines, Ballia, Uttar Pradesh - 277001</p>
+                <p>Landmark - Near Chandrashekhar Azad ITI</p>
+            </article>
+
+            <article class="detail-card">
+                <span>Phone</span>
+                <h2>Call for Support</h2>
+                <a href="tel:+917376142543">+91 7376142543</a>
+            </article>
+
+            <article class="detail-card">
+                <span>Email</span>
+                <h2>Write to Us</h2>
+                <a href="mailto:vishal9670967076@gmail.com">vishal9670967076@gmail.com</a>
+            </article>
+        </section>
+
+        <section class="map-panel">
+            <div>
+                <p class="eyebrow">Location</p>
+                <h2>Dwarikapuri Colony, Civil Lines</h2>
+                <p>Open the location and visit the centre for registration, test support, and platform guidance.</p>
+            </div>
+            <a class="primary-button" href="https://www.google.com/maps/search/?api=1&query=Dwarikapuri+Colony+Civil+Lines+Ballia+Uttar+Pradesh+277001" target="_blank" rel="noreferrer">Open Google Maps</a>
+        </section>
+
+        <section class="social-panel">
+            <p class="eyebrow">Connect With JNV</p>
+            <div class="social-links">
+                <a href="#" aria-label="Facebook"><span class="social-icon facebook-icon"></span></a>
+                <a href="#" aria-label="Instagram"><span class="social-icon instagram-icon"></span></a>
+                <a href="#" aria-label="YouTube"><span class="social-icon youtube-icon"></span></a>
+                <a href="#" aria-label="WhatsApp"><span class="social-icon whatsapp-icon"></span></a>
+            </div>
+        </section>
+    </main>
+</body>
+</html>

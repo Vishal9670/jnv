@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Joint NextVenture | Manager Access</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+
+<body>
+    <header class="site-header">
+        <a class="brand" href="{{ url_for('home') }}">
+            <span class="brand-mark">JNV</span>
+        </a>
+
+        <nav class="nav-links" aria-label="Primary navigation">
+            <a href="{{ url_for('home') }}">Home</a>
+            <a href="{{ url_for('contact') }}">Contact</a>
+            <a href="{{ url_for('login') }}">Student Login</a>
+        </nav>
+    </header>
+
+    <main class="auth-shell">
+        <section class="auth-panel">
+            <p class="eyebrow">Restricted Area</p>
+            <h1>Manager</h1>
+            <p class="auth-note">Only approved manager team members can upload test questions.</p>
+
+            {% if error %}
+                <p class="form-message error">{{ error }}</p>
+            {% endif %}
+
+            <form class="auth-form" action="{{ url_for('manager_login') }}" method="post">
+                <label for="manager_name">Manager name</label>
+                <input id="manager_name" name="manager_name" type="text" placeholder="Your name" required>
+
+                <label for="access_code">Admin access code</label>
+                <input id="access_code" name="access_code" type="password" placeholder="Provided by admin" required>
+
+                <button class="primary-button" type="submit">Continue</button>
+            </form>
+        </section>
+    </main>
+</body>
+</html>

@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JNV | CBSE CS Tests</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+
+<body>
+    <header class="site-header">
+        <a class="brand" href="{{ url_for('home') }}">
+            <span class="brand-mark">JNV</span>
+        </a>
+
+        <nav class="nav-links" aria-label="Primary navigation">
+            <a href="{{ url_for('home') }}">Home</a>
+            <a href="{{ url_for('contact') }}">Contact</a>
+            {% if is_student_logged_in %}
+                <a href="{{ url_for('test_series') }}">Test Series</a>
+                <a href="{{ url_for('my_results') }}">My Results</a>
+                <a class="nav-button" href="{{ url_for('logout') }}">Student Logout</a>
+            {% elif is_manager_logged_in %}
+                <a href="{{ url_for('manager') }}">Manager Panel</a>
+                <a class="nav-button" href="{{ url_for('manager_logout') }}">Manager Logout</a>
+            {% else %}
+                <a href="{{ url_for('manager_login') }}">Manager</a>
+                <a class="nav-button" href="{{ url_for('login') }}">Login / Sign Up</a>
+            {% endif %}
+        </nav>
+    </header>
+
+    <main class="page-shell">
+        <section class="home-hero">
+            <div class="hero-copy">
+                <p class="eyebrow">CBSE Computer Science | CUET Preparation</p>
+                <h1>JNV - Joint NextVenture</h1>
+                <p class="subtitle">
+                    Get ready for school exams, board exams, and CUET with manager-created test series, real exam style attempts, instant marks, ranks, cutoff tracking, and solutions.
+                </p>
+
+                <div class="actions">
+                    {% if is_student_logged_in %}
+                        <a class="primary-button auth-combo-button" href="{{ url_for('test_series') }}">Continue Tests</a>
+                    {% elif is_manager_logged_in %}
+                        <a class="primary-button auth-combo-button" href="{{ url_for('manager') }}">Manager Panel</a>
+                    {% else %}
+                        <a class="primary-button auth-combo-button" href="{{ url_for('login') }}">Login / Sign Up</a>
+                    {% endif %}
+                    {% if is_manager_logged_in %}
+                        <a class="secondary-button" href="{{ url_for('manager') }}">Create Paper</a>
+                    {% else %}
+                        <a class="secondary-button" href="{{ url_for('test_series') }}">Start Test Series</a>
+                    {% endif %}
+                    <a class="secondary-button" href="{{ url_for('contact') }}">Contact Centre</a>
+                </div>
+            </div>
+
+            <div class="motive-hero" aria-label="JNV motive">
+                <p class="motive-slogan">प्रज्ञानं ब्रह्म</p>
+                <h2>Real test practice builds calm exam confidence.</h2>
+                <span>Tests are important because they show the true preparation level before the final exam. JNV helps students improve marks with timed practice, topic-wise revision, rank analysis, cutoff targets, and solutions for every question.</span>
+            </div>
+        </section>
+
+        <section class="vision-section">
+            <div>
+                <p class="eyebrow">Why JNV Helps</p>
+                <h2>Know your weak topics before the exam decides for you.</h2>
+            </div>
+            <p>Students can attempt section-wise, unit-wise, chapter-wise, and topic-wise tests created by the manager. After every test they see positive marks, negative marks, total score, rank, cutoff status, skipped questions, remaining questions, and detailed solutions. This helps CBSE and CUET students prepare with discipline and aim for better college opportunities.</p>
+        </section>
+
+        <section class="motive-gallery" aria-label="JNV learning photos">
+            <img src="{{ url_for('static', filename='jnv-motive-1.png') }}" alt="Students studying computer science">
+            <img src="{{ url_for('static', filename='jnv-motive-2.png') }}" alt="Students reviewing test preparation">
+            <img src="{{ url_for('static', filename='jnv-motive-3.png') }}" alt="Students preparing with school learning values">
+        </section>
+
+        <section class="ticker-section" aria-label="Student feedback">
+            <div class="section-heading">
+                <p class="eyebrow">Student Feedback</p>
+                <h2>Students improve when practice becomes regular</h2>
+                <p>Feedback from learners who use topic tests, score analysis, and solution review for better revision.</p>
+            </div>
+
+            <div class="feedback-ticker">
+                <div class="ticker-track">
+                    <article class="feedback-chip">
+                        <p>Topic tests helped me revise Python faster.</p>
+                        <strong>Aarav Singh</strong>
+                        <span>Class 11</span>
+                    </article>
+                    <article class="feedback-chip">
+                        <p>The test report showed my weak topics clearly.</p>
+                        <strong>Ananya Verma</strong>
+                        <span>Class 12</span>
+                    </article>
+                    <article class="feedback-chip">
+                        <p>SQL practice became much easier for board prep.</p>
+                        <strong>Rohit Yadav</strong>
+                        <span>Class 12</span>
+                    </article>
+                    <article class="feedback-chip">
+                        <p>I liked choosing tests topic by topic.</p>
+                        <strong>Priya Gupta</strong>
+                        <span>Class 10</span>
+                    </article>
+                    <article class="feedback-chip">
+                        <p>My confidence improved after every test attempt.</p>
+                        <strong>Aditya Rai</strong>
+                        <span>Class 9</span>
+                    </article>
+                    <article class="feedback-chip">
+                        <p>The analysis makes revision very simple.</p>
+                        <strong>Shreya Mishra</strong>
+                        <span>Class 11</span>
+                    </article>
+                    <article class="feedback-chip">
+                        <p>Best for checking preparation before exams.</p>
+                        <strong>Nikhil Pandey</strong>
+                        <span>Class 12</span>
+                    </article>
+                    <article class="feedback-chip">
+                        <p>Question practice feels organized and useful.</p>
+                        <strong>Sneha Singh</strong>
+                        <span>Class 10</span>
+                    </article>
+                </div>
+            </div>
+        </section>
+
+        <section class="offerings-section">
+            <div class="section-heading">
+                <p class="eyebrow">Best offerings for you</p>
+                <h2>Latest test series with real exam hall feeling</h2>
+                <p>One question at a time, timer, next and back buttons, skipped question tracking, selected option memory, cutoff marks, and solution review after submission.</p>
+            </div>
+
+            <div class="offering-grid">
+                <article class="offering-card">
+                    <span>01</span>
+                    <h3>Topic Wise Tests</h3>
+                    <p>Students choose tests created for their exact chapter, unit, section, or topic.</p>
+                </article>
+                <article class="offering-card">
+                    <span>02</span>
+                    <h3>Smart Analysis</h3>
+                    <p>Every attempt gives rank, accuracy, marks, cutoff status, and revision direction.</p>
+                </article>
+                <article class="offering-card">
+                    <span>03</span>
+                    <h3>CUET Preparation</h3>
+                    <p>Practice Computer Science fundamentals for school exams and entrance readiness.</p>
+                </article>
+                <article class="offering-card">
+                    <span>04</span>
+                    <h3>Solution Review</h3>
+                    <p>Managers can upload solutions so students learn from every correct and wrong answer.</p>
+                </article>
+            </div>
+        </section>
+
+        <section class="faculty-section">
+            <div class="section-heading">
+                <p class="eyebrow">Faculty Team</p>
+                <h2>Mentors for CBSE Computer Science and CUET</h2>
+                <p>Faculty names are shown here so students know who is guiding their preparation.</p>
+            </div>
+
+            <div class="faculty-grid">
+                <article class="faculty-card">
+                    <div class="faculty-photo placeholder-photo">VS</div>
+                    <h3>Vishal Sir</h3>
+                    <p>Founder & Computer Science Mentor</p>
+                </article>
+                <article class="faculty-card">
+                    <div class="faculty-photo placeholder-photo">PY</div>
+                    <h3>Python Faculty</h3>
+                    <p>Class 11-12 Python Practice</p>
+                </article>
+                <article class="faculty-card">
+                    <div class="faculty-photo placeholder-photo">SQL</div>
+                    <h3>SQL Faculty</h3>
+                    <p>Database and Query Practice</p>
+                </article>
+                <article class="faculty-card">
+                    <div class="faculty-photo placeholder-photo">IT</div>
+                    <h3>IT Faculty</h3>
+                    <p>Class 9-10 IT and Applications</p>
+                </article>
+            </div>
+        </section>
+
+        <section class="contact-section">
+            <div class="contact-purpose-grid">
+            <div class="contact-panel purpose-panel">
+                <p class="eyebrow">Purpose</p>
+                <h2>Why we are here</h2>
+                <p>We are here to make exam preparation simple, honest, and measurable. Students should not wait until the final exam to know their preparation level. JNV gives them regular tests, clear marks, rank, cutoff comparison, and solutions so they can correct mistakes early.</p>
+                <p>Our purpose is to support CBSE and CUET students with disciplined practice that helps them score better, build confidence, and move closer to good college opportunities.</p>
+            </div>
+
+            <div class="contact-panel">
+                <p class="eyebrow">Visit Us</p>
+                <h2>Contact JNV</h2>
+                <div class="contact-list">
+                    <p>Dwarikapuri Colony, Civil Lines, Ballia, Uttar Pradesh - 277001</p>
+                    <p>Landmark - Near Chandrashekhar Azad ITI</p>
+                </div>
+                <div class="contact-actions">
+                    <a class="primary-button" href="tel:+917376142543">Call Now</a>
+                    <a class="secondary-button" href="mailto:vishal9670967076@gmail.com">Email Us</a>
+                </div>
+                <a class="map-link" href="https://www.google.com/maps/search/?api=1&query=Dwarikapuri+Colony+Civil+Lines+Ballia+Uttar+Pradesh+277001" target="_blank" rel="noreferrer">Open location on Google Maps</a>
+            </div>
+            </div>
+        </section>
+    </main>
+</body>
+</html>

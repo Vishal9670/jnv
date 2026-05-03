@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Joint NextVenture | {{ title }}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+
+<body>
+    <header class="site-header">
+        <a class="brand" href="{{ url_for('home') }}">
+            <span class="brand-mark">JNV</span>
+        </a>
+
+        <nav class="nav-links" aria-label="Primary navigation">
+            <a href="{{ url_for('home') }}">Home</a>
+            <a href="{{ url_for('contact') }}">Contact</a>
+            <a href="{{ url_for('login') }}">Login</a>
+        </nav>
+    </header>
+
+    <main class="auth-shell">
+        <section class="auth-panel">
+            <p class="eyebrow">One Time Password</p>
+            <h1>OTP</h1>
+            <p class="auth-note">{{ heading }}</p>
+
+            <p class="otp-demo">Development OTP: <strong>{{ otp }}</strong></p>
+
+            {% if error %}
+                <p class="form-message error">{{ error }}</p>
+            {% endif %}
+
+            <form class="auth-form" action="{{ action_url }}" method="post">
+                <label for="otp">Enter OTP</label>
+                <input id="otp" name="otp" type="text" inputmode="numeric" maxlength="6" placeholder="6 digit OTP" required>
+
+                <button class="primary-button" type="submit">Verify OTP</button>
+            </form>
+        </section>
+    </main>
+</body>
+</html>

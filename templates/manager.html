@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Joint NextVenture | Manager</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+
+<body>
+    <header class="site-header">
+        <a class="brand" href="{{ url_for('home') }}">
+            <span class="brand-mark">JNV</span>
+        </a>
+
+        <nav class="nav-links" aria-label="Primary navigation">
+            <a href="{{ url_for('home') }}">Home</a>
+            <a href="{{ url_for('contact') }}">Contact</a>
+            <a href="{{ url_for('test_series') }}">Test Series</a>
+            <a class="nav-button" href="{{ url_for('manager_logout') }}">Manager Logout</a>
+        </nav>
+    </header>
+
+    <main class="page-shell">
+        <section class="manager-dashboard">
+            <div>
+                <p class="eyebrow">Manager Test Builder</p>
+                <h1>{% if edit_test %}Edit Test Series{% else %}Create Test Series{% endif %}</h1>
+                <p class="subtitle test-subtitle">Prepare section-wise, unit-wise, chapter-wise, and topic-wise tests with time limit, cutoff marks, positive marks, negative marks, and full solutions.</p>
+            </div>
+
+            {% if message %}
+                <p class="form-message success">{{ message }}</p>
+            {% endif %}
+
+            {% if error %}
+                <p class="form-message error">{{ error }}</p>
+            {% endif %}
+
+            <form class="auth-form manager-builder" action="{% if edit_test %}{{ url_for('edit_test_series', test_id=edit_test.id) }}{% else %}{{ url_for('manager') }}{% endif %}" method="post">
+                <input type="hidden" name="action_type" value="test_series">
+
+                <div class="manager-form-grid">
+                    <div>
+                        <label for="title">Test title</label>
+                        <input id="title" name="title" type="text" placeholder="Class 12 SQL Chapter Test" value="{{ edit_test.title if edit_test else '' }}" required>
+                    </div>
+
+                    <div>
+                        <label for="subject">Subject</label>
+                        <select id="subject" name="subject" required>
+                            {% set selected_subject = edit_test.subject if edit_test else '' %}
+                            <option value="Class 9 IT" {% if selected_subject == 'Class 9 IT' %}selected{% endif %}>Class 9 IT</option>
+                            <option value="Class 10 Computer Applications" {% if selected_subject == 'Class 10 Computer Applications' %}selected{% endif %}>Class 10 Computer Applications</option>
+                            <option value="Class 11 Computer Science" {% if selected_subject == 'Class 11 Computer Science' %}selected{% endif %}>Class 11 Computer Science</option>
+                            <option value="Class 12 Computer Science" {% if selected_subject == 'Class 12 Computer Science' %}selected{% endif %}>Class 12 Computer Science</option>
+                            <option value="CUET Computer Science" {% if selected_subject == 'CUET Computer Science' %}selected{% endif %}>CUET Computer Science</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label for="section_name">Section</label>
+                        <input id="section_name" name="section_name" type="text" placeholder="Section A / MCQ / Case Study" value="{{ edit_test.section_name if edit_test and edit_test.section_name else '' }}">
+                    </div>
+
+                    <div>
+                        <label for="unit_name">Unit</label>
+                        <input id="unit_name" name="unit_name" type="text" placeholder="Unit 1" value="{{ edit_test.unit_name if edit_test and edit_test.unit_name else '' }}">
+                    </div>
+
+                    <div>
+                        <label for="chapter_name">Chapter</label>
+                        <input id="chapter_name" name="chapter_name" type="text" placeholder="Database Concepts" value="{{ edit_test.chapter_name if edit_test and edit_test.chapter_name else '' }}">
+                    </div>
+
+                    <div>
+                        <label for="topic">Topic</label>
+                        <input id="topic" name="topic" type="text" placeholder="SQL, Python, Networking, HTML" value="{{ edit_test.topic if edit_test and edit_test.topic else '' }}" required>
+                    </div>
+
+                    <div>
+                        <label for="time_limit_minutes">Time limit in minutes</label>
+                        <input id="time_limit_minutes" name="time_limit_minutes" type="number" min="1" value="{{ edit_test.time_limit_minutes if edit_test else 30 }}" required>
+                    </div>
+
+                    <div>
+                        <label for="cutoff_marks">Cutoff marks</label>
+                        <input id="cutoff_marks" name="cutoff_marks" type="number" min="0" step="0.25" value="{{ edit_test.cutoff_marks if edit_test else 0 }}" required>
+                    </div>
+
+                    <div>
+                        <label for="positive_marks">Positive marks per correct answer</label>
+                        <input id="positive_marks" name="positive_marks" type="number" min="0.25" step="0.25" value="{{ edit_test.positive_marks if edit_test else 1 }}" required>
+                    </div>
+
+                    <div>
+                        <label for="negative_marks">Negative marks per wrong answer</label>
+                        <input id="negative_marks" name="negative_marks" type="number" min="0" step="0.25" value="{{ edit_test.negative_marks if edit_test else 0 }}" required>
+                    </div>
+                </div>
+
+                <label for="description">Test note</label>
+                <textarea id="description" name="description" placeholder="Short instruction or exam focus for students">{{ edit_test.description if edit_test and edit_test.description else '' }}</textarea>
+
+                <label for="question_count">How many questions do you want to add?</label>
+                <input id="question_count" name="question_count" type="number" min="1" max="50" value="{{ edit_questions|length if edit_questions else 1 }}" data-question-count>
+
+                <div id="questionBlocks" class="question-blocks">
+                    {% if edit_questions %}
+                    {% for question in edit_questions %}
+                    <section class="manager-question-block">
+                        <h2>Question {{ loop.index }}</h2>
+                        <input type="hidden" name="question_id_{{ loop.index }}" value="{{ question.id }}">
+                        <label for="question_text_{{ loop.index }}">Question</label>
+                        <textarea id="question_text_{{ loop.index }}" name="question_text_{{ loop.index }}" placeholder="Enter CBSE or CUET question">{{ question.question_text }}</textarea>
+
+                        <label for="option_a_{{ loop.index }}">Option A</label>
+                        <input id="option_a_{{ loop.index }}" name="option_a_{{ loop.index }}" type="text" value="{{ question.option_a }}">
+
+                        <label for="option_b_{{ loop.index }}">Option B</label>
+                        <input id="option_b_{{ loop.index }}" name="option_b_{{ loop.index }}" type="text" value="{{ question.option_b }}">
+
+                        <label for="option_c_{{ loop.index }}">Option C</label>
+                        <input id="option_c_{{ loop.index }}" name="option_c_{{ loop.index }}" type="text" value="{{ question.option_c }}">
+
+                        <label for="option_d_{{ loop.index }}">Option D</label>
+                        <input id="option_d_{{ loop.index }}" name="option_d_{{ loop.index }}" type="text" value="{{ question.option_d }}">
+
+                        <label for="correct_answer_{{ loop.index }}">Correct answer</label>
+                        <select id="correct_answer_{{ loop.index }}" name="correct_answer_{{ loop.index }}">
+                            <option value="A" {% if question.correct_answer == 'A' %}selected{% endif %}>A</option>
+                            <option value="B" {% if question.correct_answer == 'B' %}selected{% endif %}>B</option>
+                            <option value="C" {% if question.correct_answer == 'C' %}selected{% endif %}>C</option>
+                            <option value="D" {% if question.correct_answer == 'D' %}selected{% endif %}>D</option>
+                        </select>
+
+                        <label for="solution_{{ loop.index }}">Solution</label>
+                        <textarea id="solution_{{ loop.index }}" name="solution_{{ loop.index }}" placeholder="Explain the correct option and concept">{{ question.solution or '' }}</textarea>
+                    </section>
+                    {% endfor %}
+                    {% else %}
+                    <section class="manager-question-block">
+                        <h2>Question 1</h2>
+                        <label for="question_text_1">Question</label>
+                        <textarea id="question_text_1" name="question_text_1" placeholder="Enter CBSE or CUET question"></textarea>
+
+                        <label for="option_a_1">Option A</label>
+                        <input id="option_a_1" name="option_a_1" type="text">
+
+                        <label for="option_b_1">Option B</label>
+                        <input id="option_b_1" name="option_b_1" type="text">
+
+                        <label for="option_c_1">Option C</label>
+                        <input id="option_c_1" name="option_c_1" type="text">
+
+                        <label for="option_d_1">Option D</label>
+                        <input id="option_d_1" name="option_d_1" type="text">
+
+                        <label for="correct_answer_1">Correct answer</label>
+                        <select id="correct_answer_1" name="correct_answer_1">
+                            <option value="A">A</option>
+                            <option value="B">B</option>
+                            <option value="C">C</option>
+                            <option value="D">D</option>
+                        </select>
+
+                        <label for="solution_1">Solution</label>
+                        <textarea id="solution_1" name="solution_1" placeholder="Explain the correct option and concept"></textarea>
+                    </section>
+                    {% endif %}
+                </div>
+
+                <button class="primary-button" type="submit">{% if edit_test %}Save Test Paper{% else %}Create Test Series{% endif %}</button>
+                {% if edit_test %}
+                    <a class="secondary-button" href="{{ url_for('manager') }}">Create New Paper</a>
+                {% endif %}
+            </form>
+
+            <section class="created-tests">
+                <div class="section-heading compact-heading">
+                    <p class="eyebrow">Created Papers</p>
+                    <h2>Edit uploaded test papers</h2>
+                </div>
+
+                {% if manager_tests %}
+                    <div class="manager-test-list">
+                        {% for test in manager_tests %}
+                            <article class="manager-test-row">
+                                <div>
+                                    <strong>{{ test.title }}</strong>
+                                    <span>{{ test.subject }} | {{ test.chapter_name or 'Chapter' }} | {{ test.topic or 'Topic' }}</span>
+                                </div>
+                                <div>
+                                    <span>{{ test.question_count }} questions</span>
+                                    <span>{{ test.time_limit_minutes }} min | Cutoff {{ test.cutoff_marks }}</span>
+                                </div>
+                                <a class="secondary-button" href="{{ url_for('edit_test_series', test_id=test.id) }}">Edit</a>
+                            </article>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <p class="empty-state">No test paper created yet.</p>
+                {% endif %}
+            </section>
+        </section>
+    </main>
+    <script src="{{ url_for('static', filename='script.js') }}"></script>
+</body>
+</html>

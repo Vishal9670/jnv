@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Joint NextVenture | Test Series</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+
+<body>
+    <header class="site-header">
+        <a class="brand" href="{{ url_for('home') }}">
+            <span class="brand-mark">JNV</span>
+        </a>
+
+        <nav class="nav-links" aria-label="Primary navigation">
+            <a href="{{ url_for('home') }}">Home</a>
+            <a href="{{ url_for('contact') }}">Contact</a>
+            <a href="{{ url_for('questions') }}">Practice</a>
+            <a href="{{ url_for('my_results') }}">My Results</a>
+            <a class="nav-button" href="{{ url_for('logout') }}">Logout</a>
+        </nav>
+    </header>
+
+    <main class="page-shell">
+        <section class="questions-shell">
+            <div class="section-heading">
+                <p class="eyebrow">Hello {{ user_name }}</p>
+                <h1>Test Series</h1>
+                <p>Attempt manager-created tests and track your rank, marks, cutoff status, accuracy, and solutions after submission.</p>
+            </div>
+
+            {% if error %}
+                <p class="form-message error">{{ error }}</p>
+            {% endif %}
+
+            {% if history %}
+                <div class="recent-strip">
+                    {% for item in history %}
+                        <a href="{{ url_for('series_analysis', attempt_id=item.id) }}">
+                            <span>{{ item.title }}</span>
+                            <strong>{{ item.score }} / {{ item.max_score }}</strong>
+                        </a>
+                    {% endfor %}
+                </div>
+            {% endif %}
+
+            {% if tests %}
+                <div class="series-grid">
+                    {% for test in tests %}
+                        <article class="series-card">
+                            <div class="card-top">
+                                <span>{{ test.subject }}</span>
+                                <strong>{{ test.question_count }} Qs</strong>
+                            </div>
+                            <h2>{{ test.title }}</h2>
+                            <p>{{ test.section_name or 'Section wise' }} | {{ test.unit_name or 'Unit wise' }} | {{ test.chapter_name or 'Chapter wise' }} | {{ test.topic or 'Topic wise' }}</p>
+                            <div class="series-stats">
+                                <span>{{ test.time_limit_minutes }} min</span>
+                                <span>+{{ test.positive_marks }}</span>
+                                <span>-{{ test.negative_marks }}</span>
+                                <span>Cutoff {{ test.cutoff_marks }}</span>
+                            </div>
+                            <a class="primary-button" href="{{ url_for('attempt_series', test_id=test.id) }}">Start Test</a>
+                        </article>
+                    {% endfor %}
+                </div>
+            {% elif not error %}
+                <p class="empty-state">No test series is available yet. Manager can create one from the manager panel.</p>
+            {% endif %}
+        </section>
+    </main>
+</body>
+</html>

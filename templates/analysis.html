@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Joint NextVenture | Test Analysis</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+
+<body>
+    <header class="site-header">
+        <a class="brand" href="{{ url_for('home') }}">
+            <span class="brand-mark">JNV</span>
+        </a>
+
+        <nav class="nav-links" aria-label="Primary navigation">
+            <a href="{{ url_for('home') }}">Home</a>
+            <a href="{{ url_for('contact') }}">Contact</a>
+            <a href="{{ url_for('test_series') }}">Test Series</a>
+            <a href="{{ url_for('my_results') }}">My Results</a>
+            <a class="nav-button" href="{{ url_for('logout') }}">Logout</a>
+        </nav>
+    </header>
+
+    <main class="page-shell">
+        <section class="analysis-shell">
+            <p class="eyebrow">Test Analysis</p>
+            <h1>Your Score</h1>
+
+            {% if error %}
+                <p class="form-message error">{{ error }}</p>
+            {% endif %}
+
+            {% if result %}
+                {% if result.series_mode %}
+                    <p class="subtitle test-subtitle">{{ result.test_title }} | {{ result.subject }} | {{ result.chapter_name or result.topic }}</p>
+                {% endif %}
+                <div class="score-hero">
+                    <div>
+                        <span>Final Marks</span>
+                        <strong>{{ result.score }} / {{ result.max_score }}</strong>
+                    </div>
+                    <div>
+                        <span>{% if result.series_mode %}Rank{% else %}Preparation Level{% endif %}</span>
+                        {% if result.series_mode %}
+                            <strong>{{ result.rank }} / {{ result.total_attempts }}</strong>
+                            <small>among students who attempted this test</small>
+                        {% else %}
+                            <strong>{{ result.percentage }}%</strong>
+                        {% endif %}
+                    </div>
+                    {% if result.series_mode %}
+                    <div>
+                        <span>Preparation Level</span>
+                        <strong>{{ result.percentage }}%</strong>
+                    </div>
+                    <div>
+                        <span>Cutoff</span>
+                        <strong>{{ result.cutoff_marks }}</strong>
+                    </div>
+                    {% endif %}
+                </div>
+
+                <div class="analysis-grid">
+                    <article class="analysis-card correct">
+                        <span>Correct</span>
+                        <strong>{{ result.correct }}</strong>
+                    </article>
+                    <article class="analysis-card wrong">
+                        <span>Wrong</span>
+                        <strong>{{ result.wrong }}</strong>
+                    </article>
+                    <article class="analysis-card">
+                        <span>Unanswered</span>
+                        <strong>{{ result.unanswered }}</strong>
+                    </article>
+                    <article class="analysis-card">
+                        <span>Total Questions</span>
+                        <strong>{{ result.total_questions }}</strong>
+                    </article>
+                    {% if result.series_mode %}
+                    <article class="analysis-card correct">
+                        <span>Positive Marks</span>
+                        <strong>{{ result.positive_score }}</strong>
+                    </article>
+                    <article class="analysis-card wrong">
+                        <span>Negative Marks</span>
+                        <strong>-{{ result.negative_score }}</strong>
+                    </article>
+                    <article class="analysis-card">
+                        <span>Cutoff Status</span>
+                        <strong>{% if result.passed %}Qualified{% else %}Practice{% endif %}</strong>
+                    </article>
+                    <article class="analysis-card">
+                        <span>Skipped</span>
+                        <strong>{{ result.skipped }}</strong>
+                    </article>
+                    {% endif %}
+                </div>
+
+                {% if result.series_mode and answers %}
+                    <section class="solution-review">
+                        <div class="section-heading">
+                            <p class="eyebrow">Solution Review</p>
+                            <h2>Question-wise answer check</h2>
+                        </div>
+                        {% for answer in answers %}
+                            <article class="solution-card {% if answer.is_correct %}correct-answer{% elif answer.selected_answer %}wrong-answer{% endif %}">
+                                <div class="card-top">
+                                    <span>Question {{ answer.question_order }}</span>
+                                    <strong>Marks {{ answer.marks }}</strong>
+                                </div>
+                                <h3>{{ answer.question_text }}</h3>
+                                <div class="solution-options">
+                                    <p class="{% if answer.correct_answer == 'A' %}right-option{% endif %} {% if answer.selected_answer == 'A' %}chosen-option{% endif %}">A. {{ answer.option_a }}</p>
+                                    <p class="{% if answer.correct_answer == 'B' %}right-option{% endif %} {% if answer.selected_answer == 'B' %}chosen-option{% endif %}">B. {{ answer.option_b }}</p>
+                                    <p class="{% if answer.correct_answer == 'C' %}right-option{% endif %} {% if answer.selected_answer == 'C' %}chosen-option{% endif %}">C. {{ answer.option_c }}</p>
+                                    <p class="{% if answer.correct_answer == 'D' %}right-option{% endif %} {% if answer.selected_answer == 'D' %}chosen-option{% endif %}">D. {{ answer.option_d }}</p>
+                                </div>
+                                <p class="solution-text"><strong>Your answer:</strong> {{ answer.selected_answer or 'Not answered' }} | <strong>Correct answer:</strong> {{ answer.correct_answer }}</p>
+                                <p class="solution-text"><strong>Solution:</strong> {{ answer.solution or 'Solution will be updated by manager.' }}</p>
+                            </article>
+                        {% endfor %}
+                    </section>
+                {% endif %}
+
+                <div class="actions">
+                    <a class="primary-button" href="{{ url_for('test_series') }}">Attempt More Tests</a>
+                    <a class="secondary-button" href="{{ url_for('home') }}">Go Home</a>
+                </div>
+            {% endif %}
+        </section>
+    </main>
+</body>
+</html>

@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Joint NextVenture | Attempt Test</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+
+<body class="exam-body">
+    <header class="exam-header">
+        <a class="brand" href="{{ url_for('test_series') }}">
+            <span class="brand-mark">JNV</span>
+        </a>
+        {% if test %}
+            <div class="exam-title">
+                <strong>{{ test.title }}</strong>
+                <span>{{ test.subject }} | {{ test.chapter_name or test.topic }}</span>
+            </div>
+            <div class="exam-timer" data-exam-minutes="{{ test.time_limit_minutes }}">
+                <span>Time Left</span>
+                <strong data-timer-display>--:--</strong>
+            </div>
+        {% endif %}
+    </header>
+
+    <main class="exam-shell">
+        {% if error %}
+            <p class="form-message error">{{ error }}</p>
+        {% endif %}
+
+        {% if test and questions %}
+            <form class="exam-layout" action="{{ url_for('submit_series_test', test_id=test.id) }}" method="post" data-exam-form>
+                <section class="exam-question-area">
+                    {% for question in questions %}
+                        <article class="exam-question {% if not loop.first %}is-hidden{% endif %}" data-exam-question data-question-index="{{ loop.index0 }}" data-question-id="{{ question.id }}">
+                            <div class="card-top">
+                                <span>Question {{ loop.index }} of {{ questions|length }}</span>
+                                <strong>{{ test.topic or test.chapter_name }}</strong>
+                            </div>
+                            <h1>{{ question.question_text }}</h1>
+                            <div class="options answer-options exam-options">
+                                <label><input type="radio" name="question_{{ question.id }}" value="A"> A. {{ question.option_a }}</label>
+                                <label><input type="radio" name="question_{{ question.id }}" value="B"> B. {{ question.option_b }}</label>
+                                <label><input type="radio" name="question_{{ question.id }}" value="C"> C. {{ question.option_c }}</label>
+                                <label><input type="radio" name="question_{{ question.id }}" value="D"> D. {{ question.option_d }}</label>
+                            </div>
+                        </article>
+                    {% endfor %}
+
+                    <div class="exam-controls">
+                        <button class="secondary-button" type="button" data-prev-question>Back</button>
+                        <button class="secondary-button" type="button" data-skip-question>Skip</button>
+                        <button class="primary-button" type="button" data-next-question>Next</button>
+                        <button class="primary-button" type="submit">Submit Test</button>
+                    </div>
+                </section>
+
+                <aside class="exam-palette">
+                    <div class="exam-summary">
+                        <span>Attempted <strong data-attempted-count>0</strong></span>
+                        <span>Remaining <strong data-remaining-count>{{ questions|length }}</strong></span>
+                        <span>Skipped <strong data-skipped-count>0</strong></span>
+                    </div>
+                    <div class="palette-grid" aria-label="Question navigation">
+                        {% for question in questions %}
+                            <button type="button" class="palette-button {% if loop.first %}current{% endif %}" data-jump-question="{{ loop.index0 }}" data-palette-id="{{ question.id }}">{{ loop.index }}</button>
+                        {% endfor %}
+                    </div>
+                    <div class="palette-legend">
+                        <span><i class="legend-dot answered"></i> Attempted</span>
+                        <span><i class="legend-dot skipped"></i> Skipped</span>
+                        <span><i class="legend-dot current"></i> Current</span>
+                    </div>
+                </aside>
+            </form>
+        {% endif %}
+    </main>
+    <script src="{{ url_for('static', filename='script.js') }}"></script>
+</body>
+</html>
