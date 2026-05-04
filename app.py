@@ -1,6 +1,7 @@
 import os
 import random
 import sqlite3
+from pathlib import Path
 
 from flask import Flask, redirect, render_template, request, session, url_for
 from werkzeug.security import check_password_hash, generate_password_hash
@@ -9,6 +10,8 @@ app = Flask(__name__)
 app.secret_key = os.environ.get("FLASK_SECRET_KEY", "change-this-secret-key")
 app.config["SESSION_PERMANENT"] = False
 MANAGER_ACCESS_CODE = os.environ.get("MANAGER_ACCESS_CODE", "JNV-MANAGER-2026")
+BASE_DIR = Path(__file__).resolve().parent
+DATABASE_PATH = Path(os.environ.get("DATABASE_PATH", BASE_DIR / "quiz.db"))
 
 
 @app.context_processor
@@ -22,7 +25,8 @@ def inject_login_state():
 
 
 def get_db_connection():
-    conn = sqlite3.connect("quiz.db")
+    DATABASE_PATH.parent.mkdir(parents=True, exist_ok=True)
+    conn = sqlite3.connect(DATABASE_PATH)
     conn.row_factory = sqlite3.Row
     return conn
 
@@ -171,6 +175,17 @@ def ensure_database_schema(conn):
     )
     
     conn.commit()
+
+
+def initialize_database():
+    conn = get_db_connection()
+    try:
+        ensure_database_schema(conn)
+    finally:
+        conn.close()
+
+
+initialize_database()
 
 
 def to_float(value):
@@ -1049,4 +1064,3 @@ def logout():
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
     app.run(debug=False, port=port, host="0.0.0.0", use_reloader=False)
-
