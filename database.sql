@@ -1,116 +1,105 @@
-CREATE DATABASE QuizAppDB;
-GO
-
-USE QuizAppDB;
-GO
+-- SQLite Database Schema for Quiz Application
 
 CREATE TABLE users (
-    id INT IDENTITY(1,1) PRIMARY KEY,
-    name VARCHAR(100) NOT NULL,
-    email VARCHAR(150) NOT NULL UNIQUE,
-    password_hash VARCHAR(255) NOT NULL,
-    created_at DATETIME NOT NULL DEFAULT GETDATE()
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    email TEXT NOT NULL UNIQUE,
+    password_hash TEXT NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
-GO
 
 CREATE TABLE questions (
-    id INT IDENTITY(1,1) PRIMARY KEY,
-    subject VARCHAR(120) NOT NULL DEFAULT 'Computer Science',
-    topic VARCHAR(120) NOT NULL DEFAULT 'General',
-    question_text VARCHAR(500) NOT NULL,
-    option_a VARCHAR(200) NOT NULL,
-    option_b VARCHAR(200) NOT NULL,
-    option_c VARCHAR(200) NOT NULL,
-    option_d VARCHAR(200) NOT NULL,
-    correct_answer CHAR(1) NOT NULL CHECK (correct_answer IN ('A', 'B', 'C', 'D')),
-    solution VARCHAR(MAX) NULL,
-    created_at DATETIME NOT NULL DEFAULT GETDATE()
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    subject TEXT DEFAULT 'Computer Science',
+    topic TEXT DEFAULT 'General',
+    question_text TEXT NOT NULL,
+    option_a TEXT NOT NULL,
+    option_b TEXT NOT NULL,
+    option_c TEXT NOT NULL,
+    option_d TEXT NOT NULL,
+    correct_answer TEXT NOT NULL CHECK (correct_answer IN ('A', 'B', 'C', 'D')),
+    solution TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
-GO
 
 CREATE TABLE test_attempts (
-    id INT IDENTITY(1,1) PRIMARY KEY,
-    user_id INT NOT NULL,
-    total_questions INT NOT NULL,
-    correct_answers INT NOT NULL,
-    wrong_answers INT NOT NULL,
-    unanswered INT NOT NULL,
-    score INT NOT NULL,
-    max_score INT NOT NULL,
-    percentage DECIMAL(5,2) NOT NULL,
-    created_at DATETIME NOT NULL DEFAULT GETDATE(),
-    CONSTRAINT FK_test_attempts_users FOREIGN KEY (user_id) REFERENCES users(id)
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL,
+    total_questions INTEGER NOT NULL,
+    correct_answers INTEGER NOT NULL,
+    wrong_answers INTEGER NOT NULL,
+    unanswered INTEGER NOT NULL,
+    score REAL NOT NULL,
+    max_score REAL NOT NULL,
+    percentage REAL NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id)
 );
-GO
 
 CREATE TABLE test_series (
-    id INT IDENTITY(1,1) PRIMARY KEY,
-    title VARCHAR(180) NOT NULL,
-    subject VARCHAR(120) NOT NULL,
-    section_name VARCHAR(120) NULL,
-    unit_name VARCHAR(120) NULL,
-    chapter_name VARCHAR(120) NULL,
-    topic VARCHAR(120) NULL,
-    description VARCHAR(800) NULL,
-    time_limit_minutes INT NOT NULL DEFAULT 30,
-    positive_marks DECIMAL(6,2) NOT NULL DEFAULT 1,
-    negative_marks DECIMAL(6,2) NOT NULL DEFAULT 0,
-    cutoff_marks DECIMAL(7,2) NOT NULL DEFAULT 0,
-    manager_name VARCHAR(120) NULL,
-    created_at DATETIME NOT NULL DEFAULT GETDATE()
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    title TEXT NOT NULL,
+    subject TEXT NOT NULL,
+    section_name TEXT,
+    unit_name TEXT,
+    chapter_name TEXT,
+    topic TEXT,
+    description TEXT,
+    time_limit_minutes INTEGER DEFAULT 30,
+    positive_marks REAL DEFAULT 1.0,
+    negative_marks REAL DEFAULT 0.0,
+    cutoff_marks REAL DEFAULT 0.0,
+    manager_name TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
-GO
 
 CREATE TABLE test_series_questions (
-    id INT IDENTITY(1,1) PRIMARY KEY,
-    test_series_id INT NOT NULL,
-    question_order INT NOT NULL,
-    question_text VARCHAR(1000) NOT NULL,
-    option_a VARCHAR(500) NOT NULL,
-    option_b VARCHAR(500) NOT NULL,
-    option_c VARCHAR(500) NOT NULL,
-    option_d VARCHAR(500) NOT NULL,
-    correct_answer CHAR(1) NOT NULL CHECK (correct_answer IN ('A', 'B', 'C', 'D')),
-    solution VARCHAR(MAX) NULL,
-    CONSTRAINT FK_test_series_questions_series FOREIGN KEY (test_series_id) REFERENCES test_series(id)
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    test_series_id INTEGER NOT NULL,
+    question_order INTEGER NOT NULL,
+    question_text TEXT NOT NULL,
+    option_a TEXT NOT NULL,
+    option_b TEXT NOT NULL,
+    option_c TEXT NOT NULL,
+    option_d TEXT NOT NULL,
+    correct_answer TEXT NOT NULL CHECK (correct_answer IN ('A', 'B', 'C', 'D')),
+    solution TEXT,
+    FOREIGN KEY (test_series_id) REFERENCES test_series(id)
 );
-GO
 
 CREATE TABLE test_series_attempts (
-    id INT IDENTITY(1,1) PRIMARY KEY,
-    test_series_id INT NOT NULL,
-    user_id INT NOT NULL,
-    total_questions INT NOT NULL,
-    correct_answers INT NOT NULL,
-    wrong_answers INT NOT NULL,
-    unanswered INT NOT NULL,
-    attempted INT NOT NULL,
-    skipped INT NOT NULL,
-    positive_score DECIMAL(7,2) NOT NULL,
-    negative_score DECIMAL(7,2) NOT NULL,
-    score DECIMAL(7,2) NOT NULL,
-    max_score DECIMAL(7,2) NOT NULL,
-    percentage DECIMAL(5,2) NOT NULL,
-    cutoff_marks DECIMAL(7,2) NOT NULL,
-    passed BIT NOT NULL,
-    time_limit_minutes INT NOT NULL,
-    created_at DATETIME NOT NULL DEFAULT GETDATE(),
-    CONSTRAINT FK_test_series_attempts_series FOREIGN KEY (test_series_id) REFERENCES test_series(id),
-    CONSTRAINT FK_test_series_attempts_users FOREIGN KEY (user_id) REFERENCES users(id)
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    test_series_id INTEGER NOT NULL,
+    user_id INTEGER NOT NULL,
+    total_questions INTEGER NOT NULL,
+    correct_answers INTEGER NOT NULL,
+    wrong_answers INTEGER NOT NULL,
+    unanswered INTEGER NOT NULL,
+    attempted INTEGER NOT NULL,
+    skipped INTEGER NOT NULL,
+    positive_score REAL NOT NULL,
+    negative_score REAL NOT NULL,
+    score REAL NOT NULL,
+    max_score REAL NOT NULL,
+    percentage REAL NOT NULL,
+    cutoff_marks REAL NOT NULL,
+    passed INTEGER NOT NULL,
+    time_limit_minutes INTEGER NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (test_series_id) REFERENCES test_series(id),
+    FOREIGN KEY (user_id) REFERENCES users(id)
 );
-GO
 
 CREATE TABLE test_series_answers (
-    id INT IDENTITY(1,1) PRIMARY KEY,
-    attempt_id INT NOT NULL,
-    question_id INT NOT NULL,
-    selected_answer CHAR(1) NULL,
-    is_correct BIT NOT NULL,
-    marks DECIMAL(7,2) NOT NULL,
-    CONSTRAINT FK_test_series_answers_attempt FOREIGN KEY (attempt_id) REFERENCES test_series_attempts(id),
-    CONSTRAINT FK_test_series_answers_question FOREIGN KEY (question_id) REFERENCES test_series_questions(id)
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    attempt_id INTEGER NOT NULL,
+    question_id INTEGER NOT NULL,
+    selected_answer TEXT,
+    is_correct INTEGER NOT NULL,
+    marks REAL NOT NULL,
+    FOREIGN KEY (attempt_id) REFERENCES test_series_attempts(id),
+    FOREIGN KEY (question_id) REFERENCES test_series_questions(id)
 );
-GO
 
 INSERT INTO questions
     (subject, topic, question_text, option_a, option_b, option_c, option_d, correct_answer)
@@ -118,4 +107,3 @@ VALUES
     ('Class 11 Computer Science', 'Python', 'Which language is used with Flask?', 'Python', 'Java', 'C++', 'Ruby', 'A'),
     ('Class 10 Computer Applications', 'HTML', 'What does HTML stand for?', 'Hyper Trainer Marking Language', 'Hyper Text Markup Language', 'High Text Machine Language', 'Hyper Tool Multi Language', 'B'),
     ('Class 12 Computer Science', 'SQL', 'Which SQL command reads data from a table?', 'INSERT', 'UPDATE', 'SELECT', 'DELETE', 'C');
-GO
