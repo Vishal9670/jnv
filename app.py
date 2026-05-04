@@ -1,7 +1,7 @@
 import os
 import random
+import sqlite3
 
-import pyodbc
 from flask import Flask, redirect, render_template, request, session, url_for
 from werkzeug.security import check_password_hash, generate_password_hash
 
@@ -22,137 +22,155 @@ def inject_login_state():
 
 
 def get_db_connection():
-    server = os.environ.get("DB_SERVER", r".\SQLEXPRESS")
-    database = os.environ.get("DB_NAME", "QuizAppDB")
-    username = os.environ.get("DB_USER")
-    password = os.environ.get("DB_PASSWORD")
-    driver = os.environ.get("DB_DRIVER", "ODBC Driver 17 for SQL Server")
-
-    if username and password:
-        connection_string = (
-            f"DRIVER={{{driver}}};"
-            f"SERVER={server};"
-            f"DATABASE={database};"
-            f"UID={username};"
-            f"PWD={password};"
-            "Encrypt=no;"
-            "TrustServerCertificate=yes;"
-        )
-    else:
-        connection_string = (
-            f"DRIVER={{{driver}}};"
-            f"SERVER={server};"
-            f"DATABASE={database};"
-            "Trusted_Connection=yes;"
-            "Encrypt=no;"
-            "TrustServerCertificate=yes;"
-        )
-
-    return pyodbc.connect(connection_string)
+    conn = sqlite3.connect("quiz.db")
+    conn.row_factory = sqlite3.Row
+    return conn
 
 
 def generate_otp():
     return str(random.randint(100000, 999999))
 
 
-def ensure_database_schema(cursor):
+def ensure_database_schema(conn):
+    cursor = conn.cursor()
+    
+    # Create users table
     cursor.execute(
         """
-        IF COL_LENGTH('dbo.questions', 'solution') IS NULL
-        BEGIN
-            ALTER TABLE questions ADD solution VARCHAR(MAX) NULL;
-        END
+        CREATE TABLE IF NOT EXISTS users (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL,
+            email TEXT UNIQUE NOT NULL,
+            password_hash TEXT NOT NULL,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        )
         """
     )
+    
+    # Create questions table
     cursor.execute(
         """
-        IF OBJECT_ID('dbo.test_series', 'U') IS NULL
-        BEGIN
-            CREATE TABLE test_series (
-                id INT IDENTITY(1,1) PRIMARY KEY,
-                title VARCHAR(180) NOT NULL,
-                subject VARCHAR(120) NOT NULL,
-                section_name VARCHAR(120) NULL,
-                unit_name VARCHAR(120) NULL,
-                chapter_name VARCHAR(120) NULL,
-                topic VARCHAR(120) NULL,
-                description VARCHAR(800) NULL,
-                time_limit_minutes INT NOT NULL DEFAULT 30,
-                positive_marks DECIMAL(6,2) NOT NULL DEFAULT 1,
-                negative_marks DECIMAL(6,2) NOT NULL DEFAULT 0,
-                cutoff_marks DECIMAL(7,2) NOT NULL DEFAULT 0,
-                manager_name VARCHAR(120) NULL,
-                created_at DATETIME NOT NULL DEFAULT GETDATE()
-            );
-        END
+        CREATE TABLE IF NOT EXISTS questions (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            subject TEXT,
+            topic TEXT,
+            question_text TEXT NOT NULL,
+            option_a TEXT NOT NULL,
+            option_b TEXT NOT NULL,
+            option_c TEXT NOT NULL,
+            option_d TEXT NOT NULL,
+            correct_answer TEXT NOT NULL,
+            solution TEXT,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        )
         """
     )
+    
+    # Create test_attempts table
     cursor.execute(
         """
-        IF OBJECT_ID('dbo.test_series_questions', 'U') IS NULL
-        BEGIN
-            CREATE TABLE test_series_questions (
-                id INT IDENTITY(1,1) PRIMARY KEY,
-                test_series_id INT NOT NULL,
-                question_order INT NOT NULL,
-                question_text VARCHAR(1000) NOT NULL,
-                option_a VARCHAR(500) NOT NULL,
-                option_b VARCHAR(500) NOT NULL,
-                option_c VARCHAR(500) NOT NULL,
-                option_d VARCHAR(500) NOT NULL,
-                correct_answer CHAR(1) NOT NULL CHECK (correct_answer IN ('A', 'B', 'C', 'D')),
-                solution VARCHAR(MAX) NULL,
-                CONSTRAINT FK_test_series_questions_series FOREIGN KEY (test_series_id) REFERENCES test_series(id)
-            );
-        END
+        CREATE TABLE IF NOT EXISTS test_attempts (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL,
+            total_questions INTEGER NOT NULL,
+            correct_answers INTEGER NOT NULL,
+            wrong_answers INTEGER NOT NULL,
+            unanswered INTEGER NOT NULL,
+            score REAL NOT NULL,
+            max_score REAL NOT NULL,
+            percentage REAL NOT NULL,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (user_id) REFERENCES users(id)
+        )
         """
     )
+    
+    # Create test_series table
     cursor.execute(
         """
-        IF OBJECT_ID('dbo.test_series_attempts', 'U') IS NULL
-        BEGIN
-            CREATE TABLE test_series_attempts (
-                id INT IDENTITY(1,1) PRIMARY KEY,
-                test_series_id INT NOT NULL,
-                user_id INT NOT NULL,
-                total_questions INT NOT NULL,
-                correct_answers INT NOT NULL,
-                wrong_answers INT NOT NULL,
-                unanswered INT NOT NULL,
-                attempted INT NOT NULL,
-                skipped INT NOT NULL,
-                positive_score DECIMAL(7,2) NOT NULL,
-                negative_score DECIMAL(7,2) NOT NULL,
-                score DECIMAL(7,2) NOT NULL,
-                max_score DECIMAL(7,2) NOT NULL,
-                percentage DECIMAL(5,2) NOT NULL,
-                cutoff_marks DECIMAL(7,2) NOT NULL,
-                passed BIT NOT NULL,
-                time_limit_minutes INT NOT NULL,
-                created_at DATETIME NOT NULL DEFAULT GETDATE(),
-                CONSTRAINT FK_test_series_attempts_series FOREIGN KEY (test_series_id) REFERENCES test_series(id),
-                CONSTRAINT FK_test_series_attempts_users FOREIGN KEY (user_id) REFERENCES users(id)
-            );
-        END
+        CREATE TABLE IF NOT EXISTS test_series (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            title TEXT NOT NULL,
+            subject TEXT NOT NULL,
+            section_name TEXT,
+            unit_name TEXT,
+            chapter_name TEXT,
+            topic TEXT,
+            description TEXT,
+            time_limit_minutes INTEGER DEFAULT 30,
+            positive_marks REAL DEFAULT 1,
+            negative_marks REAL DEFAULT 0,
+            cutoff_marks REAL DEFAULT 0,
+            manager_name TEXT,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        )
         """
     )
+    
+    # Create test_series_questions table
     cursor.execute(
         """
-        IF OBJECT_ID('dbo.test_series_answers', 'U') IS NULL
-        BEGIN
-            CREATE TABLE test_series_answers (
-                id INT IDENTITY(1,1) PRIMARY KEY,
-                attempt_id INT NOT NULL,
-                question_id INT NOT NULL,
-                selected_answer CHAR(1) NULL,
-                is_correct BIT NOT NULL,
-                marks DECIMAL(7,2) NOT NULL,
-                CONSTRAINT FK_test_series_answers_attempt FOREIGN KEY (attempt_id) REFERENCES test_series_attempts(id),
-                CONSTRAINT FK_test_series_answers_question FOREIGN KEY (question_id) REFERENCES test_series_questions(id)
-            );
-        END
+        CREATE TABLE IF NOT EXISTS test_series_questions (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            test_series_id INTEGER NOT NULL,
+            question_order INTEGER NOT NULL,
+            question_text TEXT NOT NULL,
+            option_a TEXT NOT NULL,
+            option_b TEXT NOT NULL,
+            option_c TEXT NOT NULL,
+            option_d TEXT NOT NULL,
+            correct_answer TEXT NOT NULL,
+            solution TEXT,
+            FOREIGN KEY (test_series_id) REFERENCES test_series(id)
+        )
         """
     )
+    
+    # Create test_series_attempts table
+    cursor.execute(
+        """
+        CREATE TABLE IF NOT EXISTS test_series_attempts (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            test_series_id INTEGER NOT NULL,
+            user_id INTEGER NOT NULL,
+            total_questions INTEGER NOT NULL,
+            correct_answers INTEGER NOT NULL,
+            wrong_answers INTEGER NOT NULL,
+            unanswered INTEGER NOT NULL,
+            attempted INTEGER NOT NULL,
+            skipped INTEGER NOT NULL,
+            positive_score REAL NOT NULL,
+            negative_score REAL NOT NULL,
+            score REAL NOT NULL,
+            max_score REAL NOT NULL,
+            percentage REAL NOT NULL,
+            cutoff_marks REAL NOT NULL,
+            passed INTEGER NOT NULL,
+            time_limit_minutes INTEGER NOT NULL,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (test_series_id) REFERENCES test_series(id),
+            FOREIGN KEY (user_id) REFERENCES users(id)
+        )
+        """
+    )
+    
+    # Create test_series_answers table
+    cursor.execute(
+        """
+        CREATE TABLE IF NOT EXISTS test_series_answers (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            attempt_id INTEGER NOT NULL,
+            question_id INTEGER NOT NULL,
+            selected_answer TEXT,
+            is_correct INTEGER NOT NULL,
+            marks REAL NOT NULL,
+            FOREIGN KEY (attempt_id) REFERENCES test_series_attempts(id),
+            FOREIGN KEY (question_id) REFERENCES test_series_questions(id)
+        )
+        """
+    )
+    
+    conn.commit()
 
 
 def to_float(value):
@@ -199,17 +217,17 @@ def login():
             cursor = conn.cursor()
             cursor.execute(
                 "SELECT id, name, email, password_hash FROM users WHERE email = ?",
-                email,
+                (email,),
             )
             user = cursor.fetchone()
             conn.close()
-        except pyodbc.Error:
-            error = "Database connection failed. Check SQL Server and DB settings."
+        except Exception as e:
+            error = "Database connection failed."
             return render_template("login.html", error=error)
 
-        if user and check_password_hash(user.password_hash, password):
-            session["pending_user_id"] = user.id
-            session["pending_user_name"] = user.name
+        if user and check_password_hash(user["password_hash"], password):
+            session["pending_user_id"] = user["id"]
+            session["pending_user_name"] = user["name"]
             session["student_otp"] = generate_otp()
             return redirect(url_for("verify_student_otp"))
 
@@ -261,17 +279,15 @@ def signup():
             cursor = conn.cursor()
             cursor.execute(
                 "INSERT INTO users (name, email, password_hash) VALUES (?, ?, ?)",
-                name,
-                email,
-                password_hash,
+                (name, email, password_hash),
             )
             conn.commit()
             conn.close()
             return redirect(url_for("login"))
-        except pyodbc.IntegrityError:
+        except sqlite3.IntegrityError:
             error = "This email is already registered."
-        except pyodbc.Error:
-            error = "Database connection failed. Check SQL Server and DB settings."
+        except Exception:
+            error = "Database connection failed."
 
     return render_template("signup.html", error=error)
 
@@ -292,16 +308,16 @@ def questions():
         conn = get_db_connection()
         cursor = conn.cursor()
         cursor.execute("SELECT DISTINCT subject FROM questions WHERE subject IS NOT NULL ORDER BY subject")
-        subjects = [row.subject for row in cursor.fetchall()]
+        subjects = [row["subject"] for row in cursor.fetchall()]
 
         if selected_subject:
             cursor.execute(
                 "SELECT DISTINCT topic FROM questions WHERE subject = ? AND topic IS NOT NULL ORDER BY topic",
-                selected_subject,
+                (selected_subject,),
             )
         else:
             cursor.execute("SELECT DISTINCT topic FROM questions WHERE topic IS NOT NULL ORDER BY topic")
-        topics = [row.topic for row in cursor.fetchall()]
+        topics = [row["topic"] for row in cursor.fetchall()]
 
         query = """
             SELECT id, subject, topic, question_text, option_a, option_b, option_c, option_d
@@ -319,11 +335,11 @@ def questions():
             params.append(selected_topic)
 
         query += " ORDER BY subject, topic, id"
-        cursor.execute(query, *params)
+        cursor.execute(query, params)
         quiz_questions = cursor.fetchall()
         conn.close()
-    except pyodbc.Error:
-        error = "Could not load questions from SQL Server. Run update_database.sql in SSMS."
+    except Exception:
+        error = "Could not load questions from database."
 
     return render_template(
         "questions.html",
@@ -354,16 +370,16 @@ def submit_test():
                 result=None,
             )
 
-        placeholders = ", ".join("?" for _ in question_ids)
+        placeholders = ", ".join("?" * len(question_ids))
         cursor.execute(
             f"SELECT id, correct_answer FROM questions WHERE id IN ({placeholders}) ORDER BY id",
-            *question_ids,
+            question_ids,
         )
         correct_answers = cursor.fetchall()
-    except pyodbc.Error:
+    except Exception:
         return render_template(
             "analysis.html",
-            error="Could not check answers from SQL Server.",
+            error="Could not check answers from database.",
             result=None,
         )
 
@@ -373,11 +389,11 @@ def submit_test():
     unanswered = 0
 
     for question in correct_answers:
-        selected = request.form.get(f"question_{question.id}")
+        selected = request.form.get(f"question_{question['id']}")
 
         if not selected:
             unanswered += 1
-        elif selected == question.correct_answer:
+        elif selected == question["correct_answer"]:
             correct += 1
         else:
             wrong += 1
@@ -401,23 +417,15 @@ def submit_test():
             """
             INSERT INTO test_attempts
                 (user_id, total_questions, correct_answers, wrong_answers, unanswered, score, max_score, percentage)
-            OUTPUT INSERTED.id
             VALUES (?, ?, ?, ?, ?, ?, ?, ?)
             """,
-            session["user_id"],
-            total_questions,
-            correct,
-            wrong,
-            unanswered,
-            score,
-            max_score,
-            percentage,
+            (session["user_id"], total_questions, correct, wrong, unanswered, score, max_score, percentage),
         )
-        attempt_id = cursor.fetchone()[0]
+        attempt_id = cursor.lastrowid
         conn.commit()
         conn.close()
         return redirect(url_for("analysis", attempt_id=attempt_id))
-    except pyodbc.Error:
+    except Exception:
         conn.close()
         return render_template("analysis.html", result=result, error=None)
 
@@ -439,27 +447,26 @@ def analysis(attempt_id):
             FROM test_attempts
             WHERE id = ? AND user_id = ?
             """,
-            attempt_id,
-            session["user_id"],
+            (attempt_id, session["user_id"]),
         )
         attempt = cursor.fetchone()
         conn.close()
 
         if attempt:
             result = {
-                "total_questions": attempt.total_questions,
-                "correct": attempt.correct_answers,
-                "wrong": attempt.wrong_answers,
-                "unanswered": attempt.unanswered,
-                "score": attempt.score,
-                "max_score": attempt.max_score,
-                "percentage": attempt.percentage,
-                "created_at": attempt.created_at,
+                "total_questions": attempt["total_questions"],
+                "correct": attempt["correct_answers"],
+                "wrong": attempt["wrong_answers"],
+                "unanswered": attempt["unanswered"],
+                "score": attempt["score"],
+                "max_score": attempt["max_score"],
+                "percentage": attempt["percentage"],
+                "created_at": attempt["created_at"],
             }
         else:
             error = "Result not found."
-    except pyodbc.Error:
-        error = "Could not load test analysis from SQL Server."
+    except Exception:
+        error = "Could not load test analysis from database."
 
     return render_template("analysis.html", result=result, error=error)
 
@@ -475,9 +482,8 @@ def test_series():
 
     try:
         conn = get_db_connection()
+        ensure_database_schema(conn)
         cursor = conn.cursor()
-        ensure_database_schema(cursor)
-        conn.commit()
         cursor.execute(
             """
             SELECT
@@ -494,18 +500,19 @@ def test_series():
         tests = cursor.fetchall()
         cursor.execute(
             """
-            SELECT TOP 5 tsa.id, tsa.score, tsa.max_score, tsa.percentage, tsa.created_at, ts.title
+            SELECT tsa.id, tsa.score, tsa.max_score, tsa.percentage, tsa.created_at, ts.title
             FROM test_series_attempts tsa
             JOIN test_series ts ON ts.id = tsa.test_series_id
             WHERE tsa.user_id = ?
             ORDER BY tsa.created_at DESC
+            LIMIT 5
             """,
-            session["user_id"],
+            (session["user_id"],),
         )
         history = cursor.fetchall()
         conn.close()
-    except pyodbc.Error:
-        error = "Could not load test series from SQL Server."
+    except Exception:
+        error = "Could not load test series from database."
 
     return render_template(
         "test_series.html",
@@ -527,10 +534,9 @@ def attempt_series(test_id):
 
     try:
         conn = get_db_connection()
+        ensure_database_schema(conn)
         cursor = conn.cursor()
-        ensure_database_schema(cursor)
-        conn.commit()
-        cursor.execute("SELECT * FROM test_series WHERE id = ?", test_id)
+        cursor.execute("SELECT * FROM test_series WHERE id = ?", (test_id,))
         test = cursor.fetchone()
         cursor.execute(
             """
@@ -539,11 +545,11 @@ def attempt_series(test_id):
             WHERE test_series_id = ?
             ORDER BY question_order, id
             """,
-            test_id,
+            (test_id,),
         )
         questions_list = cursor.fetchall()
         conn.close()
-    except pyodbc.Error:
+    except Exception:
         error = "Could not open this test series."
 
     if not test and not error:
@@ -559,9 +565,9 @@ def submit_series_test(test_id):
 
     try:
         conn = get_db_connection()
+        ensure_database_schema(conn)
         cursor = conn.cursor()
-        ensure_database_schema(cursor)
-        cursor.execute("SELECT * FROM test_series WHERE id = ?", test_id)
+        cursor.execute("SELECT * FROM test_series WHERE id = ?", (test_id,))
         test = cursor.fetchone()
         cursor.execute(
             """
@@ -570,7 +576,7 @@ def submit_series_test(test_id):
             WHERE test_series_id = ?
             ORDER BY question_order, id
             """,
-            test_id,
+            (test_id,),
         )
         questions_list = cursor.fetchall()
 
@@ -578,9 +584,9 @@ def submit_series_test(test_id):
             conn.close()
             return render_template("analysis.html", result=None, error="No questions found in this test.")
 
-        positive_marks = to_float(test.positive_marks)
-        negative_marks = to_float(test.negative_marks)
-        cutoff_marks = to_float(test.cutoff_marks)
+        positive_marks = to_float(test["positive_marks"])
+        negative_marks = to_float(test["negative_marks"])
+        cutoff_marks = to_float(test["cutoff_marks"])
         total_questions = len(questions_list)
         correct = 0
         wrong = 0
@@ -588,13 +594,13 @@ def submit_series_test(test_id):
         answer_rows = []
 
         for question in questions_list:
-            selected = request.form.get(f"question_{question.id}")
+            selected = request.form.get(f"question_{question['id']}")
             marks = 0
             is_correct = 0
 
             if not selected:
                 unanswered += 1
-            elif selected == question.correct_answer:
+            elif selected == question["correct_answer"]:
                 correct += 1
                 is_correct = 1
                 marks = positive_marks
@@ -602,7 +608,7 @@ def submit_series_test(test_id):
                 wrong += 1
                 marks = -negative_marks
 
-            answer_rows.append((question.id, selected, is_correct, marks))
+            answer_rows.append((question["id"], selected, is_correct, marks))
 
         attempted = correct + wrong
         skipped = unanswered
@@ -619,27 +625,13 @@ def submit_series_test(test_id):
                 (test_series_id, user_id, total_questions, correct_answers, wrong_answers, unanswered,
                  attempted, skipped, positive_score, negative_score, score, max_score, percentage,
                  cutoff_marks, passed, time_limit_minutes)
-            OUTPUT INSERTED.id
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
-            test_id,
-            session["user_id"],
-            total_questions,
-            correct,
-            wrong,
-            unanswered,
-            attempted,
-            skipped,
-            positive_score,
-            negative_score,
-            score,
-            max_score,
-            percentage,
-            cutoff_marks,
-            passed,
-            int(test.time_limit_minutes),
+            (test_id, session["user_id"], total_questions, correct, wrong, unanswered, attempted, skipped,
+             positive_score, negative_score, score, max_score, percentage, cutoff_marks, passed,
+             int(test["time_limit_minutes"])),
         )
-        attempt_id = cursor.fetchone()[0]
+        attempt_id = cursor.lastrowid
 
         for question_id, selected, is_correct, marks in answer_rows:
             cursor.execute(
@@ -647,17 +639,13 @@ def submit_series_test(test_id):
                 INSERT INTO test_series_answers (attempt_id, question_id, selected_answer, is_correct, marks)
                 VALUES (?, ?, ?, ?, ?)
                 """,
-                attempt_id,
-                question_id,
-                selected,
-                is_correct,
-                marks,
+                (attempt_id, question_id, selected, is_correct, marks),
             )
 
         conn.commit()
         conn.close()
         return redirect(url_for("series_analysis", attempt_id=attempt_id))
-    except pyodbc.Error:
+    except Exception:
         return render_template("analysis.html", result=None, error="Could not submit test series answers.")
 
 
@@ -672,9 +660,8 @@ def series_analysis(attempt_id):
 
     try:
         conn = get_db_connection()
+        ensure_database_schema(conn)
         cursor = conn.cursor()
-        ensure_database_schema(cursor)
-        conn.commit()
         cursor.execute(
             """
             SELECT tsa.*, ts.title, ts.subject, ts.section_name, ts.unit_name, ts.chapter_name, ts.topic
@@ -682,8 +669,7 @@ def series_analysis(attempt_id):
             JOIN test_series ts ON ts.id = tsa.test_series_id
             WHERE tsa.id = ? AND tsa.user_id = ?
             """,
-            attempt_id,
-            session["user_id"],
+            (attempt_id, session["user_id"]),
         )
         attempt = cursor.fetchone()
 
@@ -694,15 +680,14 @@ def series_analysis(attempt_id):
                 FROM test_series_attempts
                 WHERE test_series_id = ? AND score > ?
                 """,
-                attempt.test_series_id,
-                attempt.score,
+                (attempt["test_series_id"], attempt["score"]),
             )
-            rank_no = cursor.fetchone().rank_no
+            rank_no = cursor.fetchone()["rank_no"]
             cursor.execute(
                 "SELECT COUNT(*) AS total_attempts FROM test_series_attempts WHERE test_series_id = ?",
-                attempt.test_series_id,
+                (attempt["test_series_id"],),
             )
-            total_attempts = cursor.fetchone().total_attempts
+            total_attempts = cursor.fetchone()["total_attempts"]
             cursor.execute(
                 """
                 SELECT
@@ -713,39 +698,39 @@ def series_analysis(attempt_id):
                 WHERE tsa.attempt_id = ?
                 ORDER BY tsq.question_order, tsq.id
                 """,
-                attempt_id,
+                (attempt_id,),
             )
             answers = cursor.fetchall()
             result = {
                 "series_mode": True,
-                "attempt_id": attempt.id,
-                "test_title": attempt.title,
-                "subject": attempt.subject,
-                "section_name": attempt.section_name,
-                "unit_name": attempt.unit_name,
-                "chapter_name": attempt.chapter_name,
-                "topic": attempt.topic,
-                "total_questions": attempt.total_questions,
-                "correct": attempt.correct_answers,
-                "wrong": attempt.wrong_answers,
-                "unanswered": attempt.unanswered,
-                "attempted": attempt.attempted,
-                "skipped": attempt.skipped,
-                "positive_score": to_float(attempt.positive_score),
-                "negative_score": to_float(attempt.negative_score),
-                "score": to_float(attempt.score),
-                "max_score": to_float(attempt.max_score),
-                "percentage": to_float(attempt.percentage),
-                "cutoff_marks": to_float(attempt.cutoff_marks),
-                "passed": attempt.passed,
+                "attempt_id": attempt["id"],
+                "test_title": attempt["title"],
+                "subject": attempt["subject"],
+                "section_name": attempt["section_name"],
+                "unit_name": attempt["unit_name"],
+                "chapter_name": attempt["chapter_name"],
+                "topic": attempt["topic"],
+                "total_questions": attempt["total_questions"],
+                "correct": attempt["correct_answers"],
+                "wrong": attempt["wrong_answers"],
+                "unanswered": attempt["unanswered"],
+                "attempted": attempt["attempted"],
+                "skipped": attempt["skipped"],
+                "positive_score": to_float(attempt["positive_score"]),
+                "negative_score": to_float(attempt["negative_score"]),
+                "score": to_float(attempt["score"]),
+                "max_score": to_float(attempt["max_score"]),
+                "percentage": to_float(attempt["percentage"]),
+                "cutoff_marks": to_float(attempt["cutoff_marks"]),
+                "passed": attempt["passed"],
                 "rank": rank_no,
                 "total_attempts": total_attempts,
-                "created_at": attempt.created_at,
+                "created_at": attempt["created_at"],
             }
         else:
             error = "Result not found."
         conn.close()
-    except pyodbc.Error:
+    except Exception:
         error = "Could not load detailed test analysis."
 
     return render_template("analysis.html", result=result, answers=answers, error=error)
@@ -761,9 +746,8 @@ def my_results():
 
     try:
         conn = get_db_connection()
+        ensure_database_schema(conn)
         cursor = conn.cursor()
-        ensure_database_schema(cursor)
-        conn.commit()
         cursor.execute(
             """
             SELECT tsa.id, tsa.score, tsa.max_score, tsa.percentage, tsa.correct_answers, tsa.wrong_answers,
@@ -773,11 +757,11 @@ def my_results():
             WHERE tsa.user_id = ?
             ORDER BY tsa.created_at DESC
             """,
-            session["user_id"],
+            (session["user_id"],),
         )
         attempts = cursor.fetchall()
         conn.close()
-    except pyodbc.Error:
+    except Exception:
         error = "Could not load your result history."
 
     return render_template("history.html", attempts=attempts, error=error, user_name=session.get("user_name"))
@@ -801,8 +785,8 @@ def manager():
 
         try:
             conn = get_db_connection()
+            ensure_database_schema(conn)
             cursor = conn.cursor()
-            ensure_database_schema(cursor)
 
             if action_type == "test_series":
                 cursor.execute(
@@ -810,23 +794,21 @@ def manager():
                     INSERT INTO test_series
                         (title, subject, section_name, unit_name, chapter_name, topic, description,
                          time_limit_minutes, positive_marks, negative_marks, cutoff_marks, manager_name)
-                    OUTPUT INSERTED.id
                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                     """,
-                    request.form["title"].strip(),
-                    subject,
-                    request.form.get("section_name", "").strip(),
-                    request.form.get("unit_name", "").strip(),
-                    request.form.get("chapter_name", "").strip(),
-                    topic,
-                    request.form.get("description", "").strip(),
-                    int(request.form.get("time_limit_minutes", 30)),
-                    float(request.form.get("positive_marks", 1)),
-                    float(request.form.get("negative_marks", 0)),
-                    float(request.form.get("cutoff_marks", 0)),
-                    session.get("manager_name"),
+                    (request.form["title"].strip(), subject,
+                     request.form.get("section_name", "").strip(),
+                     request.form.get("unit_name", "").strip(),
+                     request.form.get("chapter_name", "").strip(),
+                     topic,
+                     request.form.get("description", "").strip(),
+                     int(request.form.get("time_limit_minutes", 30)),
+                     float(request.form.get("positive_marks", 1)),
+                     float(request.form.get("negative_marks", 0)),
+                     float(request.form.get("cutoff_marks", 0)),
+                     session.get("manager_name")),
                 )
-                test_series_id = cursor.fetchone()[0]
+                test_series_id = cursor.lastrowid
 
                 for index in range(1, question_count + 1):
                     question_text = request.form.get(f"question_text_{index}", "").strip()
@@ -846,15 +828,7 @@ def manager():
                             (test_series_id, question_order, question_text, option_a, option_b, option_c, option_d, correct_answer, solution)
                         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
                         """,
-                        test_series_id,
-                        index,
-                        question_text,
-                        option_a,
-                        option_b,
-                        option_c,
-                        option_d,
-                        correct_answer,
-                        solution,
+                        (test_series_id, index, question_text, option_a, option_b, option_c, option_d, correct_answer, solution),
                     )
                     uploaded += 1
 
@@ -882,15 +856,7 @@ def manager():
                         (subject, topic, question_text, option_a, option_b, option_c, option_d, correct_answer, solution)
                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
                     """,
-                    subject,
-                    topic,
-                    question_text,
-                    option_a,
-                    option_b,
-                    option_c,
-                    option_d,
-                    correct_answer,
-                    solution,
+                    (subject, topic, question_text, option_a, option_b, option_c, option_d, correct_answer, solution),
                 )
                 uploaded += 1
 
@@ -898,18 +864,17 @@ def manager():
             manager_tests = load_manager_tests(cursor)
             conn.close()
             message = f"{uploaded} question uploaded successfully."
-        except pyodbc.Error:
-            error = "Question upload failed. Run update_database.sql and check SQL Server connection."
+        except Exception:
+            error = "Question upload failed. Please check your data."
 
     if request.method == "GET":
         try:
             conn = get_db_connection()
+            ensure_database_schema(conn)
             cursor = conn.cursor()
-            ensure_database_schema(cursor)
-            conn.commit()
             manager_tests = load_manager_tests(cursor)
             conn.close()
-        except pyodbc.Error:
+        except Exception:
             error = "Could not load created test papers."
 
     return render_template("manager.html", message=message, error=error, manager_tests=manager_tests)
@@ -928,8 +893,8 @@ def edit_test_series(test_id):
 
     try:
         conn = get_db_connection()
+        ensure_database_schema(conn)
         cursor = conn.cursor()
-        ensure_database_schema(cursor)
 
         if request.method == "POST":
             subject = request.form["subject"].strip()
@@ -943,18 +908,17 @@ def edit_test_series(test_id):
                     description = ?, time_limit_minutes = ?, positive_marks = ?, negative_marks = ?, cutoff_marks = ?
                 WHERE id = ?
                 """,
-                request.form["title"].strip(),
-                subject,
-                request.form.get("section_name", "").strip(),
-                request.form.get("unit_name", "").strip(),
-                request.form.get("chapter_name", "").strip(),
-                topic,
-                request.form.get("description", "").strip(),
-                int(request.form.get("time_limit_minutes", 30)),
-                float(request.form.get("positive_marks", 1)),
-                float(request.form.get("negative_marks", 0)),
-                float(request.form.get("cutoff_marks", 0)),
-                test_id,
+                (request.form["title"].strip(), subject,
+                 request.form.get("section_name", "").strip(),
+                 request.form.get("unit_name", "").strip(),
+                 request.form.get("chapter_name", "").strip(),
+                 topic,
+                 request.form.get("description", "").strip(),
+                 int(request.form.get("time_limit_minutes", 30)),
+                 float(request.form.get("positive_marks", 1)),
+                 float(request.form.get("negative_marks", 0)),
+                 float(request.form.get("cutoff_marks", 0)),
+                 test_id),
             )
 
             saved = 0
@@ -979,16 +943,8 @@ def edit_test_series(test_id):
                             option_d = ?, correct_answer = ?, solution = ?
                         WHERE id = ? AND test_series_id = ?
                         """,
-                        index,
-                        question_text,
-                        option_a,
-                        option_b,
-                        option_c,
-                        option_d,
-                        correct_answer,
-                        solution,
-                        int(question_id),
-                        test_id,
+                        (index, question_text, option_a, option_b, option_c, option_d, correct_answer, solution,
+                         int(question_id), test_id),
                     )
                 else:
                     cursor.execute(
@@ -997,22 +953,14 @@ def edit_test_series(test_id):
                             (test_series_id, question_order, question_text, option_a, option_b, option_c, option_d, correct_answer, solution)
                         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
                         """,
-                        test_id,
-                        index,
-                        question_text,
-                        option_a,
-                        option_b,
-                        option_c,
-                        option_d,
-                        correct_answer,
-                        solution,
+                        (test_id, index, question_text, option_a, option_b, option_c, option_d, correct_answer, solution),
                     )
                 saved += 1
 
             conn.commit()
             message = f"Test paper updated with {saved} question."
 
-        cursor.execute("SELECT * FROM test_series WHERE id = ?", test_id)
+        cursor.execute("SELECT * FROM test_series WHERE id = ?", (test_id,))
         edit_test = cursor.fetchone()
         cursor.execute(
             """
@@ -1021,13 +969,13 @@ def edit_test_series(test_id):
             WHERE test_series_id = ?
             ORDER BY question_order, id
             """,
-            test_id,
+            (test_id,),
         )
         edit_questions = cursor.fetchall()
         manager_tests = load_manager_tests(cursor)
         conn.close()
-    except pyodbc.Error:
-        error = "Could not edit this test paper. Check SQL Server connection."
+    except Exception:
+        error = "Could not edit this test paper. Check database connection."
 
     return render_template(
         "manager.html",
@@ -1099,5 +1047,6 @@ def logout():
 
 
 if __name__ == "__main__":
-    app.run(debug=True, use_reloader=False)
+    port = int(os.environ.get("PORT", 5000))
+    app.run(debug=False, port=port, host="0.0.0.0", use_reloader=False)
 
